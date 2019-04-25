@@ -2,6 +2,7 @@ from flask import Flask
 from flask import request
 from flask import jsonify
 import subprocess
+import random
 
 app = Flask(__name__)
 
@@ -35,11 +36,8 @@ def root():
 @app.route("/modify", methods=["POST"])
 def modify():
     tfjob_meta_name = request.form["tfjob_meta_name"]
-    tfjob_master_replica = request.form["tfjob_master_replica"]
     tfjob_master_image = request.form["tfjob_master_image"]
-    tfjob_worker_replica = request.form["tfjob_worker_replica"]
     tfjob_worker_image = request.form["tfjob_worker_image"]
-    tfjob_ps_replica = request.form["tfjob_ps_replica"]
     tfjob_ps_image = request.form["tfjob_ps_image"]
     tfjob_path_dataset = request.form["tfjob_path_dataset"]
     tfjob_path_tensorboard = request.form["tfjob_path_tensorboard"]
@@ -47,11 +45,8 @@ def modify():
     tfjob_next_epoch = int(request.form["tfjob_next_epoch"])
 
     assert tfjob_meta_name is not None
-    assert tfjob_master_replica is not None
     assert tfjob_master_image is not None
-    assert tfjob_worker_replica is not None
     assert tfjob_worker_image is not None
-    assert tfjob_ps_replica is not None
     assert tfjob_ps_image is not None
     assert tfjob_path_dataset is not None
     assert tfjob_path_tensorboard is not None
@@ -65,11 +60,13 @@ def modify():
     else:
 
         c = ConfigManager(tfjob_meta_name, TEMPLATE)
-        c.set_master_replica(tfjob_master_replica)
+        master, worker, ps = c.get_master_worker_ps_replica()
+
+        c.set_master_replica(str(master))
         c.set_master_image(tfjob_master_image)
-        c.set_worker_replica(tfjob_worker_replica)
+        c.set_worker_replica(str(worker))
         c.set_worker_image(tfjob_worker_image)
-        c.set_ps_replica(tfjob_ps_replica)
+        c.set_ps_replica(str(ps))
         c.set_ps_image(tfjob_ps_image)
         c.set_path_dataset(tfjob_path_dataset)
         c.set_path_tensorboard(tfjob_path_tensorboard)
@@ -121,3 +118,12 @@ class ConfigManager:
         self.edit_template_value(29, path)
         self.edit_template_value(53, path)
         self.edit_template_value(77, path)
+
+    def get_master_worker_ps_replica(self):
+        index = random.randint(0, 5)
+        if index % 3 == 0:
+            return 1, 2, 1
+        elif index % 3 == 1:
+            return 1, 2, 2
+        elif index % 3 == 2:
+            return 1, 4, 2
