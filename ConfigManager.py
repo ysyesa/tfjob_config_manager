@@ -89,7 +89,7 @@ class ConfigManager:
 
     def edit_template_value(self, index, value):
         strings = self.template[index].split(":")
-        self.template[index] = strings[0] + ": " + value
+        self.template[index] = strings[0] + ": " + value + "\n"
 
     def set_master_replica(self, number):
         self.edit_template_value(7, number)
