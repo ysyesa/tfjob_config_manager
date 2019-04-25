@@ -1,0 +1,78 @@
+apiVersion: kubeflow.org/v1alpha2
+kind: TFJob
+metadata:
+  name: cnncifar10
+spec:
+  tfReplicaSpecs:
+    Master:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - name: tensorflow
+              image: ysyesa/cnn_cifar_10
+              env:
+                - name: TFJOB_NUM_DATA.TFJOB_EPOCH
+                  value: "2560.2"
+              volumeMounts:
+                - name: cifar10
+                  mountPath: /app/cifar_10
+                  readOnly: true
+                - name: tensorboard
+                  mountPath: /app/tensorboard
+                  readOnly: false
+          volumes:
+            - name: cifar10
+              hostPath:
+                path: /home/ysyesa/tfjob_dataset/cifar_10
+            - name: tensorboard
+              hostPath:
+                path: /home/ysyesa/tfjob_tensorboard
+    Worker:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - name: tensorflow
+              image: ysyesa/cnn_cifar_10
+              env:
+                - name: TFJOB_NUM_DATA.TFJOB_EPOCH
+                  value: "2560.2"
+              volumeMounts:
+                - name: cifar10
+                  mountPath: /app/cifar_10
+                  readOnly: true
+                - name: tensorboard
+                  mountPath: /app/tensorboard
+                  readOnly: false
+          volumes:
+            - name: cifar10
+              hostPath:
+                path: /home/ysyesa/tfjob_dataset/cifar_10
+            - name: tensorboard
+              hostPath:
+                path: /home/ysyesa/tfjob_tensorboard
+    PS:
+      replicas: 1
+      template:
+        spec:
+          containers:
+            - name: tensorflow
+              image: ysyesa/cnn_cifar_10
+              env:
+                - name: TFJOB_NUM_DATA.TFJOB_EPOCH
+                  value: "2560.2"
+              volumeMounts:
+                - name: cifar10
+                  mountPath: /app/cifar_10
+                  readOnly: true
+                - name: tensorboard
+                  mountPath: /app/tensorboard
+                  readOnly: false
+          volumes:
+            - name: cifar10
+              hostPath:
+                path: /home/ysyesa/tfjob_dataset/cifar_10
+            - name: tensorboard
+              hostPath:
+                path: /home/ysyesa/tfjob_tensorboard
