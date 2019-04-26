@@ -92,11 +92,13 @@ class ConfigManager:
         self.edit_template_value(15, number)
 
     def set_ps_replica(self, number):
-        self.edit_template_value(48, number)
+        self.edit_template_value(50, number)
 
     def set_worker_replica(self, number):
-        self.edit_template_value(81, number)
+        self.edit_template_value(78, number)
 
     def set_current_epoch(self, epoch):
         epoch = "\"" + epoch + "\""
         self.edit_template_value(27, epoch)
+        self.edit_template_value(62, epoch)
+        self.edit_template_value(90, epoch)
