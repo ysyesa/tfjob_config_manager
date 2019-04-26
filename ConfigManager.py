@@ -15,7 +15,7 @@ def write_template(template):
 
 
 def write_accuracy(epoch, accuracy):
-    with open("accuracy.yaml", "w") as fi:
+    with open("accuracy.yaml", "a") as fi:
         string = "Epoch #" + epoch + " accuracy: " + accuracy + "\n"
         fi.write(string)
         fi.close()
@@ -44,6 +44,8 @@ def modify():
     assert tfjob_meta_name is not None
     assert tfjob_current_epoch is not None
 
+    write_accuracy(str(tfjob_current_epoch), tfjob_current_epoch_accuracy)
+
     ex = subprocess.Popen(
         ["kubectl", "get", "tfjob", tfjob_meta_name, "-o", "yaml", "--export"],
         stdout=subprocess.PIPE
@@ -66,7 +68,6 @@ def modify():
         c.set_ps_replica(str(ps))
         c.set_current_epoch(str(tfjob_current_epoch + 1))
 
-        write_accuracy(str(tfjob_current_epoch), tfjob_current_epoch_accuracy)
         write_template(c.template)
 
         subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
