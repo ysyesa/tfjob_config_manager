@@ -14,6 +14,13 @@ def write_template(template):
         fi.close()
 
 
+def write_accuracy(epoch, accuracy):
+    with open("accuracy.yaml", "w") as fi:
+        string = "Epoch #" + epoch + " accuracy: " + accuracy + "\n"
+        fi.write(string)
+        fi.close()
+
+
 def get_master_worker_ps_replica():
     index = random.randint(0, 5)
     if index % 3 == 0:
@@ -33,6 +40,7 @@ def root():
 def modify():
     tfjob_meta_name = request.form["tfjob_meta_name"]
     tfjob_current_epoch = int(request.form["tfjob_current_epoch"])
+    tfjob_current_epoch_accuracy = request.form["tfjob_current_epoch_accuracy"]
     assert tfjob_meta_name is not None
     assert tfjob_current_epoch is not None
 
@@ -58,6 +66,7 @@ def modify():
         c.set_ps_replica(str(ps))
         c.set_current_epoch(str(tfjob_current_epoch + 1))
 
+        write_accuracy(str(tfjob_current_epoch), tfjob_current_epoch_accuracy)
         write_template(c.template)
 
         subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
