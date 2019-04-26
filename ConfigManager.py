@@ -10,7 +10,7 @@ app = Flask(__name__)
 def write_template(template):
     with open("output.yaml", "w") as fi:
         for i in range(len(template)):
-            fi.write(template[i])
+            fi.write(template[i] + "\n")
         fi.close()
 
 
