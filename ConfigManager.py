@@ -44,7 +44,7 @@ def get_metrics(url, wanted_metrics=None):
 
 
 def get_master_worker_ps_replica(master, worker, ps):
-    THRESHOLD = 70
+    THRESHOLD = 60
 
     wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
     metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
