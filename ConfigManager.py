@@ -3,6 +3,8 @@ from flask import request
 from flask import jsonify
 import subprocess
 import random
+import urllib2
+import math
 
 app = Flask(__name__)
 
@@ -21,14 +23,40 @@ def write_accuracy(epoch, accuracy):
         fi.close()
 
 
-def get_master_worker_ps_replica():
-    index = random.randint(0, 5)
-    if index % 3 == 0:
-        return 1, 2, 2
-    elif index % 3 == 1:
-        return 1, 3, 3
-    elif index % 3 == 2:
-        return 1, 4, 4
+def get_metrics(url, wanted_metrics=None):
+    content = urllib2.urlopen(url).read()
+    content = content.split("\n")[:-1]
+    metrics = {}
+    if wanted_metrics is None:
+        for each in content:
+            if "#" in each:
+                continue
+            metric = each.split(" ")
+            metrics[metric[0]] = metric[1]
+    else:
+        for each in content:
+            if "#" in each:
+                continue
+            metric = each.split(" ")
+            if metric[0] in wanted_metrics:
+                metrics[metric[0]] = metric[1]
+    return metrics
+
+
+def get_master_worker_ps_replica(master, worker, ps):
+    THRESHOLD = 70
+
+    wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
+    metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
+    metrics2 = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
+
+    memusage1 = math.ceil((float(metrics1["node_memory_MemTotal_bytes"]) - float(metrics1["node_memory_MemFree_bytes"])) / float(metrics1["node_memory_MemTotal_bytes"]) * 100)
+    memusage2 = math.ceil((float(metrics2["node_memory_MemTotal_bytes"]) - float(metrics2["node_memory_MemFree_bytes"])) / float(metrics2["node_memory_MemTotal_bytes"]) * 100)
+
+    if memusage1 < THRESHOLD and memusage2 < THRESHOLD:
+        return master, worker + 1, ps + 1
+    else:
+        return master, worker, ps
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -53,6 +81,9 @@ def modify():
     template = ex.stdout.read().split("\n")
 
     tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
+    tfjob_master_replica = int(template[15].split(" ")[1])
+    tfjob_worker_replica = int(template[85].split(" ")[1])
+    tfjob_ps_replica = int(template[50].split(" ")[1])
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
@@ -61,7 +92,7 @@ def modify():
     else:
 
         c = ConfigManager(tfjob_meta_name, template)
-        master, worker, ps = get_master_worker_ps_replica()
+        master, worker, ps = get_master_worker_ps_replica(tfjob_master_replica, tfjob_worker_replica, tfjob_ps_replica)
 
         c.set_master_replica(str(master))
         c.set_worker_replica(str(worker))
