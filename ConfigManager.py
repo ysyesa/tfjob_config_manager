@@ -81,9 +81,9 @@ def modify():
     template = ex.stdout.read().split("\n")
 
     tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
-    tfjob_master_replica = int(template[15].split(" ")[1])
-    tfjob_worker_replica = int(template[85].split(" ")[1])
-    tfjob_ps_replica = int(template[50].split(" ")[1])
+    tfjob_master_replica = int(template[15].split(" ")[-1])
+    tfjob_worker_replica = int(template[85].split(" ")[-1])
+    tfjob_ps_replica = int(template[50].split(" ")[-1])
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
