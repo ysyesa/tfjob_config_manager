@@ -91,7 +91,8 @@ def modify():
         return jsonify(message)
     else:
 
-        c = ConfigManager(tfjob_meta_name, template)
+        tfjob_new_meta_name = tfjob_meta_name + str(tfjob_current_epoch + 1)
+        c = ConfigManager(tfjob_new_meta_name, template)
         master, worker, ps = get_master_worker_ps_replica(tfjob_master_replica, tfjob_worker_replica, tfjob_ps_replica)
 
         c.set_master_replica(str(master))
