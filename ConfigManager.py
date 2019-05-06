@@ -52,7 +52,7 @@ def modify():
     )
     template = ex.stdout.read().split("\n")
 
-    tfjob_total_epoch = int(template[28].split(":")[1].split("\"")[1])
+    tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
@@ -82,23 +82,23 @@ class ConfigManager:
     def __init__(self, meta_name, template):
         self.meta_name = meta_name
         self.template = template
-        self.edit_template_value(11, self.meta_name)
+        self.edit_template_value(7, self.meta_name)
 
     def edit_template_value(self, index, value):
         strings = self.template[index].split(":")
         self.template[index] = strings[0] + ": " + value + "\n"
 
     def set_master_replica(self, number):
-        self.edit_template_value(18, number)
+        self.edit_template_value(15, number)
 
     def set_ps_replica(self, number):
-        self.edit_template_value(53, number)
+        self.edit_template_value(50, number)
 
     def set_worker_replica(self, number):
-        self.edit_template_value(88, number)
+        self.edit_template_value(85, number)
 
     def set_current_epoch(self, epoch):
         epoch = "\"" + epoch + "\""
-        self.edit_template_value(30, epoch)
-        self.edit_template_value(65, epoch)
-        self.edit_template_value(100, epoch)
+        self.edit_template_value(27, epoch)
+        self.edit_template_value(62, epoch)
+        self.edit_template_value(97, epoch)
