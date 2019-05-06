@@ -24,11 +24,11 @@ def write_accuracy(epoch, accuracy):
 def get_master_worker_ps_replica():
     index = random.randint(0, 5)
     if index % 3 == 0:
-        return 1, 2, 1
-    elif index % 3 == 1:
         return 1, 2, 2
+    elif index % 3 == 1:
+        return 1, 3, 3
     elif index % 3 == 2:
-        return 1, 4, 2
+        return 1, 4, 4
 
 
 @app.route("/", methods=["GET", "POST"])
