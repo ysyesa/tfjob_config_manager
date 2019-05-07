@@ -9,6 +9,9 @@ import math
 app = Flask(__name__)
 
 
+ALREADY_SERVED = []
+
+
 def write_template(template):
     with open("output.yaml", "w") as fi:
         for i in range(len(template)):
@@ -71,6 +74,12 @@ def modify():
     tfjob_current_epoch_accuracy = request.form["tfjob_current_epoch_accuracy"]
     assert tfjob_meta_name is not None
     assert tfjob_current_epoch is not None
+
+    if tfjob_meta_name in ALREADY_SERVED:
+        message = "Has been server"
+        return jsonify(message)
+
+    ALREADY_SERVED.append(tfjob_meta_name)
 
     write_accuracy(str(tfjob_current_epoch), tfjob_current_epoch_accuracy)
 
