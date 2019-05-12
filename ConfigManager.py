@@ -82,6 +82,8 @@ def modify():
     tfjob_current_epoch_time = request.form["tfjob_current_epoch_time"]
     assert tfjob_meta_name is not None
     assert tfjob_current_epoch is not None
+    assert tfjob_current_epoch_accuracy is not None
+    assert tfjob_current_epoch_time is not None
 
     ex = subprocess.Popen(
         ["kubectl", "get", "tfjob", tfjob_meta_name, "-o", "yaml", "--export"],
