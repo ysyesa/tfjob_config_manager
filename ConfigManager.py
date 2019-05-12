@@ -85,8 +85,6 @@ def modify():
     assert tfjob_current_epoch_accuracy is not None
     assert tfjob_current_epoch_time is not None
 
-    print "HAHAHAHAHHEHEHEHEHEHEHEAS"
-
     ex = subprocess.Popen(
         ["kubectl", "get", "tfjob", tfjob_meta_name, "-o", "yaml", "--export"],
         stdout=subprocess.PIPE
@@ -101,8 +99,8 @@ def modify():
         epoch=tfjob_current_epoch,
         accuracy=tfjob_current_epoch_accuracy,
         time=tfjob_current_epoch_time,
-        num_of_ps=tfjob_ps_replica,
-        num_of_worker=tfjob_worker_replica
+        num_of_ps=str(tfjob_ps_replica),
+        num_of_worker=str(tfjob_worker_replica)
     )
 
     tfjob_current_epoch = int(tfjob_current_epoch)
