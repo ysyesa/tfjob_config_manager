@@ -9,9 +9,6 @@ import math
 app = Flask(__name__)
 
 
-ALREADY_SERVED = []
-
-
 def write_template(template):
     with open("output.yaml", "w") as fi:
         for i in range(len(template)):
@@ -19,11 +16,15 @@ def write_template(template):
         fi.close()
 
 
-def write_accuracy(epoch, accuracy):
-    with open("accuracy.yaml", "a") as fi:
-        string = "Epoch #" + epoch + " accuracy: " + accuracy + "\n"
-        fi.write(string)
-        fi.close()
+def write_statistic(epoch, accuracy, time, num_of_ps, num_of_worker):
+    if epoch == "1":
+        fi = open("stats.txt", "w")
+    else:
+        fi = open("stats.txt", "a")
+
+    string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + "\n"
+    fi.write(string)
+    fi.close()
 
 
 def get_metrics(url, wanted_metrics=None):
@@ -46,20 +47,26 @@ def get_metrics(url, wanted_metrics=None):
     return metrics
 
 
-def get_master_worker_ps_replica(master, worker, ps):
-    THRESHOLD = 60
+def get_worker_ps_replica(worker, ps):
+    # THRESHOLD = 60
+    #
+    # wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
+    # metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
+    # metrics2 = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
+    #
+    # memusage1 = math.ceil(
+    #     (float(metrics1["node_memory_MemTotal_bytes"]) - float(metrics1["node_memory_MemFree_bytes"])) / float(
+    #         metrics1["node_memory_MemTotal_bytes"]) * 100)
+    # memusage2 = math.ceil(
+    #     (float(metrics2["node_memory_MemTotal_bytes"]) - float(metrics2["node_memory_MemFree_bytes"])) / float(
+    #         metrics2["node_memory_MemTotal_bytes"]) * 100)
+    #
+    # if memusage1 < THRESHOLD and memusage2 < THRESHOLD:
+    #     return worker + 1, ps + 1
+    # else:
+    #     return worker, ps
 
-    wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
-    metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
-    metrics2 = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
-
-    memusage1 = math.ceil((float(metrics1["node_memory_MemTotal_bytes"]) - float(metrics1["node_memory_MemFree_bytes"])) / float(metrics1["node_memory_MemTotal_bytes"]) * 100)
-    memusage2 = math.ceil((float(metrics2["node_memory_MemTotal_bytes"]) - float(metrics2["node_memory_MemFree_bytes"])) / float(metrics2["node_memory_MemTotal_bytes"]) * 100)
-
-    if memusage1 < THRESHOLD and memusage2 < THRESHOLD:
-        return master, worker + 1, ps + 1
-    else:
-        return master, worker, ps
+    return worker, ps
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -70,18 +77,11 @@ def root():
 @app.route("/modify", methods=["POST"])
 def modify():
     tfjob_meta_name = request.form["tfjob_meta_name"]
-    tfjob_current_epoch = int(request.form["tfjob_current_epoch"])
+    tfjob_current_epoch = request.form["tfjob_current_epoch"]
     tfjob_current_epoch_accuracy = request.form["tfjob_current_epoch_accuracy"]
+    tfjob_current_epoch_time = request.form["tfjob_current_epoch_time"]
     assert tfjob_meta_name is not None
     assert tfjob_current_epoch is not None
-
-    if tfjob_meta_name in ALREADY_SERVED:
-        message = "Has been server"
-        return jsonify(message)
-
-    ALREADY_SERVED.append(tfjob_meta_name)
-
-    write_accuracy(str(tfjob_current_epoch), tfjob_current_epoch_accuracy)
 
     ex = subprocess.Popen(
         ["kubectl", "get", "tfjob", tfjob_meta_name, "-o", "yaml", "--export"],
@@ -90,21 +90,29 @@ def modify():
     template = ex.stdout.read().split("\n")
 
     tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
-    tfjob_master_replica = int(template[15].split(" ")[-1])
-    tfjob_worker_replica = int(template[85].split(" ")[-1])
-    tfjob_ps_replica = int(template[50].split(" ")[-1])
+    tfjob_worker_replica = int(template[48].split(" ")[-1])
+    tfjob_ps_replica = int(template[15].split(" ")[-1])
 
+    write_statistic(
+        epoch=tfjob_current_epoch,
+        accuracy=tfjob_current_epoch_accuracy,
+        time=tfjob_current_epoch_time,
+        num_of_ps=tfjob_ps_replica,
+        num_of_worker=tfjob_worker_replica
+    )
+
+    tfjob_current_epoch = int(tfjob_current_epoch)
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
         print message
         return jsonify(message)
     else:
 
-        tfjob_new_meta_name = tfjob_meta_name[:-1] + str(tfjob_current_epoch + 1)
+        tfjob_meta_name_split = tfjob_meta_name.split("epoch")
+        tfjob_new_meta_name = tfjob_meta_name_split[0] + "epoch" + str(tfjob_current_epoch + 1)
         c = ConfigManager(tfjob_new_meta_name, template)
-        master, worker, ps = get_master_worker_ps_replica(tfjob_master_replica, tfjob_worker_replica, tfjob_ps_replica)
+        worker, ps = get_worker_ps_replica(tfjob_worker_replica, tfjob_ps_replica)
 
-        c.set_master_replica(str(master))
         c.set_worker_replica(str(worker))
         c.set_ps_replica(str(ps))
         c.set_current_epoch(str(tfjob_current_epoch + 1))
@@ -129,17 +137,13 @@ class ConfigManager:
         strings = self.template[index].split(":")
         self.template[index] = strings[0] + ": " + value + "\n"
 
-    def set_master_replica(self, number):
+    def set_ps_replica(self, number):
         self.edit_template_value(15, number)
 
-    def set_ps_replica(self, number):
-        self.edit_template_value(50, number)
-
     def set_worker_replica(self, number):
-        self.edit_template_value(85, number)
+        self.edit_template_value(48, number)
 
     def set_current_epoch(self, epoch):
         epoch = "\"" + epoch + "\""
         self.edit_template_value(27, epoch)
-        self.edit_template_value(62, epoch)
-        self.edit_template_value(97, epoch)
+        self.edit_template_value(60, epoch)
