@@ -47,7 +47,7 @@ def get_metrics(url, wanted_metrics=None):
     return metrics
 
 
-def get_worker_ps_replica(worker, ps):
+def get_worker_ps_replica(current_epoch, worker, ps):
     # THRESHOLD = 60
     #
     # wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
@@ -66,7 +66,10 @@ def get_worker_ps_replica(worker, ps):
     # else:
     #     return worker, ps
 
-    return worker, ps
+    if current_epoch % 2 == 0:
+        return worker + 1, ps + 1
+    else:
+        return worker, ps
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -113,7 +116,7 @@ def modify():
         tfjob_meta_name_split = tfjob_meta_name.split("epoch")
         tfjob_new_meta_name = tfjob_meta_name_split[0] + "epoch" + str(tfjob_current_epoch + 1)
         c = ConfigManager(tfjob_new_meta_name, template)
-        worker, ps = get_worker_ps_replica(tfjob_worker_replica, tfjob_ps_replica)
+        worker, ps = get_worker_ps_replica(tfjob_current_epoch, tfjob_worker_replica, tfjob_ps_replica)
 
         c.set_worker_replica(str(worker))
         c.set_ps_replica(str(ps))
