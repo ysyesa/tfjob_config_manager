@@ -109,14 +109,14 @@ def modify():
         worker, ps, memusage1, memusage2 = get_worker_ps_replica(tfjob_current_epoch, tfjob_worker_replica, tfjob_ps_replica)
 
         write_statistic(
-            epoch=tfjob_current_epoch,
-            accuracy=tfjob_current_epoch_accuracy,
-            time=tfjob_current_epoch_time,
-            step_time=tfjob_current_epoch_step_time,
+            epoch=str(tfjob_current_epoch),
+            accuracy=str(tfjob_current_epoch_accuracy),
+            time=str(tfjob_current_epoch_time),
+            step_time=str(tfjob_current_epoch_step_time),
             num_of_ps=str(tfjob_ps_replica),
             num_of_worker=str(tfjob_worker_replica),
-            start_time=tfjob_start_time,
-            end_time=tfjob_end_time,
+            start_time=str(tfjob_start_time),
+            end_time=str(tfjob_end_time),
             memusage1=str(memusage1),
             memusage2=str(memusage2)
         )
