@@ -16,13 +16,13 @@ def write_template(template):
         fi.close()
 
 
-def write_statistic(epoch, accuracy, time, num_of_ps, num_of_worker):
+def write_statistic(epoch, accuracy, time, num_of_ps, num_of_worker, start_time, end_time):
     if epoch == "1":
         fi = open("stats.txt", "w")
     else:
         fi = open("stats.txt", "a")
 
-    string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + "\n"
+    string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
     fi.write(string)
     fi.close()
 
@@ -83,6 +83,8 @@ def modify():
     tfjob_current_epoch = request.form["tfjob_current_epoch"]
     tfjob_current_epoch_accuracy = request.form["tfjob_current_epoch_accuracy"]
     tfjob_current_epoch_time = request.form["tfjob_current_epoch_time"]
+    tfjob_start_time = request.form["tfjob_start_time"]
+    tfjob_end_time = request.form["tfjob_end_time"]
     assert tfjob_meta_name is not None
     assert tfjob_current_epoch is not None
     assert tfjob_current_epoch_accuracy is not None
@@ -103,7 +105,9 @@ def modify():
         accuracy=tfjob_current_epoch_accuracy,
         time=tfjob_current_epoch_time,
         num_of_ps=str(tfjob_ps_replica),
-        num_of_worker=str(tfjob_worker_replica)
+        num_of_worker=str(tfjob_worker_replica),
+        start_time=tfjob_start_time,
+        end_time=tfjob_end_time
     )
 
     tfjob_current_epoch = int(tfjob_current_epoch)
