@@ -16,13 +16,13 @@ def write_template(template):
         fi.close()
 
 
-def write_statistic(epoch, accuracy, time, num_of_ps, num_of_worker, start_time, end_time):
+def write_statistic(epoch, accuracy, time, num_of_ps, num_of_worker, start_time, end_time, memusage1, memusage2):
     if epoch == "1":
         fi = open("stats.txt", "w")
     else:
         fi = open("stats.txt", "a")
 
-    string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
+    string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", start_time: " + start_time + ", end_time: " + end_time + ", mem_usage_1: " + memusage1 + ", mem_usage_2: " + memusage2 + "\n"
     fi.write(string)
     fi.close()
 
@@ -48,28 +48,23 @@ def get_metrics(url, wanted_metrics=None):
 
 
 def get_worker_ps_replica(current_epoch, worker, ps):
-    # THRESHOLD = 60
-    #
-    # wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
-    # metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
-    # metrics2 = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
-    #
-    # memusage1 = math.ceil(
-    #     (float(metrics1["node_memory_MemTotal_bytes"]) - float(metrics1["node_memory_MemFree_bytes"])) / float(
-    #         metrics1["node_memory_MemTotal_bytes"]) * 100)
-    # memusage2 = math.ceil(
-    #     (float(metrics2["node_memory_MemTotal_bytes"]) - float(metrics2["node_memory_MemFree_bytes"])) / float(
-    #         metrics2["node_memory_MemTotal_bytes"]) * 100)
-    #
-    # if memusage1 < THRESHOLD and memusage2 < THRESHOLD:
-    #     return worker + 1, ps + 1
-    # else:
-    #     return worker, ps
+    THRESHOLD = 80
 
-    if current_epoch % 2 == 0:
-        return worker + 1, ps + 1
+    wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
+    metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
+    metrics2 = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
+
+    memusage1 = math.ceil(
+        (float(metrics1["node_memory_MemTotal_bytes"]) - float(metrics1["node_memory_MemFree_bytes"])) / float(
+            metrics1["node_memory_MemTotal_bytes"]) * 100)
+    memusage2 = math.ceil(
+        (float(metrics2["node_memory_MemTotal_bytes"]) - float(metrics2["node_memory_MemFree_bytes"])) / float(
+            metrics2["node_memory_MemTotal_bytes"]) * 100)
+
+    if current_epoch % 2 == 0 and memusage1 < THRESHOLD and memusage2 < THRESHOLD:
+        return worker + 1, ps + 1, memusage1, memusage2
     else:
-        return worker, ps
+        return worker, ps, memusage1, memusage2
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -100,16 +95,6 @@ def modify():
     tfjob_worker_replica = int(template[48].split(" ")[-1])
     tfjob_ps_replica = int(template[15].split(" ")[-1])
 
-    write_statistic(
-        epoch=tfjob_current_epoch,
-        accuracy=tfjob_current_epoch_accuracy,
-        time=tfjob_current_epoch_time,
-        num_of_ps=str(tfjob_ps_replica),
-        num_of_worker=str(tfjob_worker_replica),
-        start_time=tfjob_start_time,
-        end_time=tfjob_end_time
-    )
-
     tfjob_current_epoch = int(tfjob_current_epoch)
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
@@ -120,7 +105,19 @@ def modify():
         tfjob_meta_name_split = tfjob_meta_name.split("epoch")
         tfjob_new_meta_name = tfjob_meta_name_split[0] + "epoch" + str(tfjob_current_epoch + 1)
         c = ConfigManager(tfjob_new_meta_name, template)
-        worker, ps = get_worker_ps_replica(tfjob_current_epoch, tfjob_worker_replica, tfjob_ps_replica)
+        worker, ps, memusage1, memusage2 = get_worker_ps_replica(tfjob_current_epoch, tfjob_worker_replica, tfjob_ps_replica)
+
+        write_statistic(
+            epoch=tfjob_current_epoch,
+            accuracy=tfjob_current_epoch_accuracy,
+            time=tfjob_current_epoch_time,
+            num_of_ps=str(tfjob_ps_replica),
+            num_of_worker=str(tfjob_worker_replica),
+            start_time=tfjob_start_time,
+            end_time=tfjob_end_time,
+            memusage1=str(memusage1),
+            memusage2=str(memusage2)
+        )
 
         c.set_worker_replica(str(worker))
         c.set_ps_replica(str(ps))
