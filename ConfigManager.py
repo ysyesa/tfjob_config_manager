@@ -100,11 +100,22 @@ def modify():
     )
     template = ex.stdout.read().split("\n")
 
+    tfjob_current_epoch = int(tfjob_current_epoch)
     tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
     tfjob_worker_replica = int(template[48].split(" ")[-1])
     tfjob_ps_replica = int(template[15].split(" ")[-1])
 
-    tfjob_current_epoch = int(tfjob_current_epoch)
+    write_statistic(
+        epoch=str(tfjob_current_epoch),
+        accuracy=str(tfjob_current_epoch_accuracy),
+        time=str(tfjob_current_epoch_time),
+        step_time=str(tfjob_current_epoch_step_time),
+        num_of_ps=str(tfjob_ps_replica),
+        num_of_worker=str(tfjob_worker_replica),
+        start_time=str(tfjob_start_time),
+        end_time=str(tfjob_end_time)
+    )
+
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
         print message
@@ -121,17 +132,6 @@ def modify():
             threshold=60,
             ratio=1,
             minimum=1
-        )
-
-        write_statistic(
-            epoch=str(tfjob_current_epoch),
-            accuracy=str(tfjob_current_epoch_accuracy),
-            time=str(tfjob_current_epoch_time),
-            step_time=str(tfjob_current_epoch_step_time),
-            num_of_ps=str(tfjob_ps_replica),
-            num_of_worker=str(tfjob_worker_replica),
-            start_time=str(tfjob_start_time),
-            end_time=str(tfjob_end_time)
         )
 
         c.set_worker_replica(str(num_worker))
