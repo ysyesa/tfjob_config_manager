@@ -23,7 +23,7 @@ def write_statistic(epoch, accuracy, time, step_time, num_of_ps, num_of_worker, 
     else:
         fi = open("stats.txt", "a")
 
-    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", mem_usage: " + memusage
+    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker
     string = original_string + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
     fi.write(string)
     fi.close()
