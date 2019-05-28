@@ -1,6 +1,7 @@
 import math
 import subprocess
 import urllib2
+import requests
 
 from flask import Flask
 from flask import jsonify
@@ -22,11 +23,12 @@ def write_statistic(epoch, accuracy, time, step_time, num_of_ps, num_of_worker, 
     else:
         fi = open("stats.txt", "a")
 
-    string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", step_time: " + step_time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
+    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker
+    string = original_string + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
     fi.write(string)
     fi.close()
 
-    return string
+    return original_string
 
 
 def get_metrics(url, wanted_metrics=None):
@@ -117,13 +119,17 @@ def modify():
         start_time=str(tfjob_start_time),
         end_time=str(tfjob_end_time)
     )
-    urllib2.urlopen(
-        "https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage?chat_id=418704212&text=" + stats).read()
+    requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
+        "chat_id": "418704212",
+        "text": stats
+    })
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
-        urllib2.urlopen(
-            "https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage?chat_id=418704212&text=" + message).read()
+        requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
+            "chat_id": "418704212",
+            "text": message
+        })
         print message
         return jsonify(message)
     else:
@@ -150,8 +156,10 @@ def modify():
         subprocess.call(["kubectl", "apply", "-f", "output.yaml"])
 
         message = "Generating configuration for epoch #" + str(tfjob_current_epoch + 1) + " with " + str(num_ps) + " PS and " + str(num_worker) + " WORKERS"
-        urllib2.urlopen(
-            "https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage?chat_id=418704212&text=" + message).read()
+        requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
+            "chat_id": "418704212",
+            "text": message
+        })
 
         message = "Configuration generated and applied for epoch #" + str(tfjob_current_epoch + 1)
         print message
