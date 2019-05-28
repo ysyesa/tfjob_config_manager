@@ -105,9 +105,9 @@ def modify():
     template = ex.stdout.read().split("\n")
 
     tfjob_current_epoch = int(tfjob_current_epoch)
-    tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
-    tfjob_worker_replica = int(template[48].split(" ")[-1])
-    tfjob_ps_replica = int(template[15].split(" ")[-1])
+    tfjob_total_epoch = int(template[26].split(":")[1].split("\"")[1])
+    tfjob_worker_replica = int(template[49].split(" ")[-1])
+    tfjob_ps_replica = int(template[16].split(" ")[-1])
 
     stats = write_statistic(
         epoch=str(tfjob_current_epoch),
@@ -179,12 +179,12 @@ class ConfigManager:
         self.template[index] = strings[0] + ": " + value + "\n"
 
     def set_ps_replica(self, number):
-        self.edit_template_value(15, number)
+        self.edit_template_value(16, number)
 
     def set_worker_replica(self, number):
-        self.edit_template_value(48, number)
+        self.edit_template_value(49, number)
 
     def set_current_epoch(self, epoch):
         epoch = "\"" + epoch + "\""
-        self.edit_template_value(27, epoch)
-        self.edit_template_value(60, epoch)
+        self.edit_template_value(28, epoch)
+        self.edit_template_value(61, epoch)
