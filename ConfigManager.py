@@ -17,13 +17,13 @@ def write_template(template):
         fi.close()
 
 
-def write_statistic(epoch, accuracy, time, step_time, num_of_ps, num_of_worker, start_time, end_time):
+def write_statistic(epoch, accuracy, time, step_time, num_of_ps, num_of_worker, start_time, end_time, memusage):
     if epoch == "1":
         fi = open("stats.txt", "w")
     else:
         fi = open("stats.txt", "a")
 
-    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker
+    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", mem_usage: " + memusage
     string = original_string + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
     fi.write(string)
     fi.close()
@@ -76,7 +76,7 @@ def get_worker_ps_replica(num_ps, num_worker, threshold, ratio, minimum):
             additional_ps = additional_ps + 1
             additional_worker = int(additional_ps / ratio)
 
-    return num_ps + additional_ps, num_worker + additional_worker
+    return num_ps + additional_ps, num_worker + additional_worker, memusage2
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -109,6 +109,14 @@ def modify():
     tfjob_worker_replica = int(template[48].split(" ")[-1])
     tfjob_ps_replica = int(template[15].split(" ")[-1])
 
+    num_ps, num_worker, mem_usage = get_worker_ps_replica(
+        num_ps=tfjob_ps_replica,
+        num_worker=tfjob_worker_replica,
+        threshold=60,
+        ratio=1,
+        minimum=1
+    )
+
     stats = write_statistic(
         epoch=str(tfjob_current_epoch),
         accuracy=str(tfjob_current_epoch_accuracy),
@@ -139,14 +147,6 @@ def modify():
         tfjob_meta_name_split = tfjob_meta_name.split("epoch")
         tfjob_new_meta_name = tfjob_meta_name_split[0] + "epoch" + str(tfjob_current_epoch + 1)
         c = ConfigManager(tfjob_new_meta_name, template)
-
-        num_ps, num_worker = get_worker_ps_replica(
-            num_ps=tfjob_ps_replica,
-            num_worker=tfjob_worker_replica,
-            threshold=60,
-            ratio=1,
-            minimum=1
-        )
 
         c.set_worker_replica(str(num_worker))
         c.set_ps_replica(str(num_ps))
