@@ -99,16 +99,10 @@ def modify():
     assert tfjob_current_epoch_time is not None
 
     ex = subprocess.Popen(
-        ["kubectl", "get", "tfjob", tfjob_meta_name, "-o", "yaml", "--export"],
+        ["kubectl", "get", "tfjob", "-n", "cnn-cifar-10", tfjob_meta_name, "-o", "yaml", "--export"],
         stdout=subprocess.PIPE
     )
     template = ex.stdout.read().split("\n")
-    print template
-    i = 0
-    for each in template:
-        print i
-        print each
-        i = i + 1
 
     tfjob_current_epoch = int(tfjob_current_epoch)
     tfjob_total_epoch = int(template[25].split(":")[1].split("\"")[1])
@@ -131,7 +125,7 @@ def modify():
     })
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
-        subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
+        subprocess.call(["kubectl", "delete", "tfjob", "-n", "cnn-cifar-10", tfjob_meta_name])
 
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
         requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
@@ -160,7 +154,7 @@ def modify():
 
         write_template(c.template)
 
-        subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
+        subprocess.call(["kubectl", "delete", "tfjob", "-n", "cnn-cifar-10", tfjob_meta_name])
         subprocess.call(["kubectl", "apply", "-f", "output.yaml"])
 
         message = "Generating configuration for epoch #" + str(tfjob_current_epoch + 1) + " with " + str(num_ps) + " PS and " + str(num_worker) + " WORKERS"
