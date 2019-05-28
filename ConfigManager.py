@@ -26,6 +26,8 @@ def write_statistic(epoch, accuracy, time, step_time, num_of_ps, num_of_worker, 
     fi.write(string)
     fi.close()
 
+    return string
+
 
 def get_metrics(url, wanted_metrics=None):
     content = urllib2.urlopen(url).read()
@@ -105,7 +107,7 @@ def modify():
     tfjob_worker_replica = int(template[48].split(" ")[-1])
     tfjob_ps_replica = int(template[15].split(" ")[-1])
 
-    write_statistic(
+    stats = write_statistic(
         epoch=str(tfjob_current_epoch),
         accuracy=str(tfjob_current_epoch_accuracy),
         time=str(tfjob_current_epoch_time),
@@ -115,9 +117,13 @@ def modify():
         start_time=str(tfjob_start_time),
         end_time=str(tfjob_end_time)
     )
+    urllib2.urlopen(
+        "https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage?chat_id=418704212&text=" + stats).read()
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
+        urllib2.urlopen(
+            "https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage?chat_id=418704212&text=" + message).read()
         print message
         return jsonify(message)
     else:
@@ -142,6 +148,10 @@ def modify():
 
         subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
         subprocess.call(["kubectl", "apply", "-f", "output.yaml"])
+
+        message = "Generating configuration for epoch #" + str(tfjob_current_epoch + 1) + " with " + str(num_ps) + " PS and " + str(num_worker) + " WORKERS"
+        urllib2.urlopen(
+            "https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage?chat_id=418704212&text=" + message).read()
 
         message = "Configuration generated and applied for epoch #" + str(tfjob_current_epoch + 1)
         print message
