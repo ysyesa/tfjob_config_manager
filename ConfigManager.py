@@ -103,6 +103,7 @@ def modify():
         stdout=subprocess.PIPE
     )
     template = ex.stdout.read().split("\n")
+    print template
     i = 0
     for each in template:
         print i
