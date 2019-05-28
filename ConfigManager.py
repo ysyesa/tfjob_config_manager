@@ -125,6 +125,8 @@ def modify():
     })
 
     if (tfjob_current_epoch + 1) > tfjob_total_epoch:
+        subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
+
         message = "Final epoch (#" + str(tfjob_total_epoch) + ") has reached. Training is done."
         requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
             "chat_id": "418704212",
