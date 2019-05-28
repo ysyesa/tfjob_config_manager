@@ -2,12 +2,37 @@ import math
 import subprocess
 import urllib2
 import requests
+from threading import Thread
+from Queue import Queue
+import time
 
 from flask import Flask
 from flask import jsonify
 from flask import request
 
 app = Flask(__name__)
+
+MEM_USAGE = Queue()
+thread_metrics = None
+
+
+def get_mem_usage():
+    MEM_USAGE.put(0)
+    counter = 0
+    while 1:
+        print "get_mem_usage()"
+        wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
+        value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
+        value = math.ceil(
+            (float(value["node_memory_MemTotal_bytes"]) - float(value["node_memory_MemFree_bytes"])) / float(
+                value["node_memory_MemTotal_bytes"]) * 100)
+        total = MEM_USAGE.get() * counter + value
+        counter = counter + 1
+        average = total / counter
+        MEM_USAGE.empty()
+        MEM_USAGE.put(average)
+        MEM_USAGE.task_done()
+        time.sleep(5)
 
 
 def write_template(template):
@@ -23,7 +48,7 @@ def write_statistic(epoch, accuracy, time, step_time, num_of_ps, num_of_worker, 
     else:
         fi = open("stats.txt", "a")
 
-    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker
+    original_string = "Epoch #" + epoch + " = " + "accuracy: " + accuracy + ", time(s): " + time + ", num_ps: " + num_of_ps + ", num_worker: " + num_of_worker + ", avg_mem_usage: " + memusage
     string = original_string + ", start_time: " + start_time + ", end_time: " + end_time + "\n"
     fi.write(string)
     fi.close()
@@ -52,18 +77,7 @@ def get_metrics(url, wanted_metrics=None):
 
 
 def get_worker_ps_replica(num_ps, num_worker, threshold, ratio, minimum):
-    wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
-    metrics1 = get_metrics("http://10.148.0.14:9100/metrics", wanted_metrics)
-    metrics2 = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
-
-    memusage1 = math.ceil(
-        (float(metrics1["node_memory_MemTotal_bytes"]) - float(metrics1["node_memory_MemFree_bytes"])) / float(
-            metrics1["node_memory_MemTotal_bytes"]) * 100)
-    memusage2 = math.ceil(
-        (float(metrics2["node_memory_MemTotal_bytes"]) - float(metrics2["node_memory_MemFree_bytes"])) / float(
-            metrics2["node_memory_MemTotal_bytes"]) * 100)
-
-    if memusage1 >= threshold and memusage2 >= threshold:
+    if MEM_USAGE.get() >= threshold:
         return num_ps, num_worker
 
     additional_ps = 0
@@ -76,7 +90,7 @@ def get_worker_ps_replica(num_ps, num_worker, threshold, ratio, minimum):
             additional_ps = additional_ps + 1
             additional_worker = int(additional_ps / ratio)
 
-    return num_ps + additional_ps, num_worker + additional_worker, memusage2
+    return num_ps + additional_ps, num_worker + additional_worker, MEM_USAGE.get()
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -84,8 +98,18 @@ def root():
     return jsonify("The ConfigurationListener is working.")
 
 
+@app.route("/notify", methods=["POST"])
+def notify_upon_start():
+    global thread_metrics
+    thread_metrics = Thread(target=get_mem_usage)
+    thread_metrics.start()
+
+
 @app.route("/modify", methods=["POST"])
 def modify():
+    global thread_metrics
+    thread_metrics.exit()
+
     tfjob_meta_name = request.form["tfjob_meta_name"]
     tfjob_current_epoch = request.form["tfjob_current_epoch"]
     tfjob_current_epoch_accuracy = request.form["tfjob_current_epoch_accuracy"]
@@ -158,7 +182,8 @@ def modify():
         subprocess.call(["kubectl", "delete", "tfjob", tfjob_meta_name])
         subprocess.call(["kubectl", "apply", "-f", "output.yaml"])
 
-        message = "Generating configuration for epoch #" + str(tfjob_current_epoch + 1) + " with " + str(num_ps) + " PS and " + str(num_worker) + " WORKERS"
+        message = "Generating configuration for epoch #" + str(tfjob_current_epoch + 1) + " with " + str(
+            num_ps) + " PS and " + str(num_worker) + " WORKERS"
         requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
             "chat_id": "418704212",
             "text": message
