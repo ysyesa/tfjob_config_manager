@@ -125,7 +125,8 @@ def modify():
         num_of_ps=str(tfjob_ps_replica),
         num_of_worker=str(tfjob_worker_replica),
         start_time=str(tfjob_start_time),
-        end_time=str(tfjob_end_time)
+        end_time=str(tfjob_end_time),
+        memusage=str(mem_usage)
     )
     requests.post("https://api.telegram.org/bot844758581:AAFnTEBzBZcCGOTpLwuysk7tvTkEwGmBpoY/sendMessage", data={
         "chat_id": "418704212",
