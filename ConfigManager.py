@@ -12,26 +12,25 @@ from flask import request
 
 app = Flask(__name__)
 
-SHOULD_THREAD_STOP = Queue()
+SHOULD_METRICS_COLLECTED = Queue()
 MEM_USAGE = Queue()
 thread_metrics = None
 
 
 def get_mem_usage():
-    MEM_USAGE.put(0)
-    MEM_USAGE.task_done()
-    while SHOULD_THREAD_STOP.get() == 0:
-        wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
-        value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
-        value = math.ceil(
-            (float(value["node_memory_MemTotal_bytes"]) - float(value["node_memory_MemFree_bytes"])) / float(
-                value["node_memory_MemTotal_bytes"]) * 100)
+    while 1:
+        if SHOULD_METRICS_COLLECTED.get() == 1:
+            wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
+            value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
+            value = math.ceil(
+                (float(value["node_memory_MemTotal_bytes"]) - float(value["node_memory_MemFree_bytes"])) / float(
+                    value["node_memory_MemTotal_bytes"]) * 100)
 
-        if value > MEM_USAGE.get():
-            MEM_USAGE.empty()
-            MEM_USAGE.put(value)
-            MEM_USAGE.task_done()
-        time.sleep(5)
+            if value > MEM_USAGE.get():
+                MEM_USAGE.empty()
+                MEM_USAGE.put(value)
+                MEM_USAGE.task_done()
+            time.sleep(5)
 
 
 def write_template(template):
@@ -99,20 +98,26 @@ def root():
 
 @app.route("/notify", methods=["POST"])
 def notify_upon_start():
-    SHOULD_THREAD_STOP.empty()
-    SHOULD_THREAD_STOP.put(0)
-    SHOULD_THREAD_STOP.task_done()
+    MEM_USAGE.empty()
+    MEM_USAGE.put(0)
+    MEM_USAGE.task_done()
+
+    SHOULD_METRICS_COLLECTED.empty()
+    SHOULD_METRICS_COLLECTED.put(1)
+    SHOULD_METRICS_COLLECTED.task_done()
+
     global thread_metrics
-    thread_metrics = Thread(target=get_mem_usage)
-    thread_metrics.start()
+    if thread_metrics is None:
+        thread_metrics = Thread(target=get_mem_usage)
+        thread_metrics.start()
     return jsonify("Notification accepted.")
 
 
 @app.route("/modify", methods=["POST"])
 def modify():
-    SHOULD_THREAD_STOP.empty()
-    SHOULD_THREAD_STOP.put(1)
-    SHOULD_THREAD_STOP.task_done()
+    SHOULD_METRICS_COLLECTED.empty()
+    SHOULD_METRICS_COLLECTED.put(0)
+    SHOULD_METRICS_COLLECTED.task_done()
 
     tfjob_meta_name = request.form["tfjob_meta_name"]
     tfjob_current_epoch = request.form["tfjob_current_epoch"]
