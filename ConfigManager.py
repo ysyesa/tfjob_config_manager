@@ -126,6 +126,8 @@ def modify():
     assert tfjob_current_epoch_accuracy is not None
     assert tfjob_current_epoch_time is not None
 
+    print "HAHAHEHE"
+
     ex = subprocess.Popen(
         ["kubectl", "get", "tfjob", tfjob_meta_name, "-o", "yaml", "--export"],
         stdout=subprocess.PIPE
