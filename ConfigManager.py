@@ -3,7 +3,6 @@ import subprocess
 import urllib2
 import requests
 from threading import Thread
-from Queue import Queue
 import time
 
 from flask import Flask
@@ -12,24 +11,25 @@ from flask import request
 
 app = Flask(__name__)
 
-SHOULD_METRICS_COLLECTED = Queue()
-MEM_USAGE = Queue()
+SHOULD_METRICS_COLLECTED = 0
+MEM_USAGE = 0
 thread_metrics = None
 
 
 def get_mem_usage():
+    global MEM_USAGE
+    global SHOULD_METRICS_COLLECTED
+
     while 1:
-        if SHOULD_METRICS_COLLECTED.get() == 1:
+        if SHOULD_METRICS_COLLECTED == 1:
             wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
             value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
             value = math.ceil(
                 (float(value["node_memory_MemTotal_bytes"]) - float(value["node_memory_MemFree_bytes"])) / float(
                     value["node_memory_MemTotal_bytes"]) * 100)
 
-            if value > MEM_USAGE.get():
-                MEM_USAGE.empty()
-                MEM_USAGE.put(value)
-                MEM_USAGE.task_done()
+            if value > MEM_USAGE:
+                MEM_USAGE = value
             time.sleep(5)
 
 
@@ -75,7 +75,9 @@ def get_metrics(url, wanted_metrics=None):
 
 
 def get_worker_ps_replica(num_ps, num_worker, threshold, ratio, minimum):
-    if MEM_USAGE.get() >= threshold:
+    global MEM_USAGE
+
+    if MEM_USAGE >= threshold:
         return num_ps, num_worker
 
     additional_ps = 0
@@ -98,27 +100,24 @@ def root():
 
 @app.route("/notify", methods=["POST"])
 def notify_upon_start():
-    MEM_USAGE.empty()
-    MEM_USAGE.put(0)
-    MEM_USAGE.task_done()
-
-    SHOULD_METRICS_COLLECTED.empty()
-    SHOULD_METRICS_COLLECTED.put(1)
-    SHOULD_METRICS_COLLECTED.task_done()
-
+    global MEM_USAGE
+    global SHOULD_METRICS_COLLECTED
     global thread_metrics
+
+    MEM_USAGE = 0
+    SHOULD_METRICS_COLLECTED = 1
+
     if thread_metrics is None:
         thread_metrics = Thread(target=get_mem_usage)
         thread_metrics.start()
-    print "Notification accepted"
     return jsonify("Notification accepted.")
 
 
 @app.route("/modify", methods=["POST"])
 def modify():
-    SHOULD_METRICS_COLLECTED.empty()
-    SHOULD_METRICS_COLLECTED.put(0)
-    SHOULD_METRICS_COLLECTED.task_done()
+    global SHOULD_METRICS_COLLECTED
+
+    SHOULD_METRICS_COLLECTED = 0
 
     tfjob_meta_name = request.form["tfjob_meta_name"]
     tfjob_current_epoch = request.form["tfjob_current_epoch"]
