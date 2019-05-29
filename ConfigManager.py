@@ -78,7 +78,7 @@ def get_worker_ps_replica(num_ps, num_worker, threshold, ratio, minimum):
     global MEM_USAGE
 
     if MEM_USAGE >= threshold:
-        return num_ps, num_worker
+        return num_ps, num_worker, MEM_USAGE
 
     additional_ps = 0
     additional_worker = 0
