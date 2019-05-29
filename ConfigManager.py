@@ -19,6 +19,8 @@ thread_metrics = None
 
 def get_mem_usage():
     MEM_USAGE.put(0)
+    MEM_USAGE.task_done()
+    print "SHOULD_THREAD_STOP value = " + str(SHOULD_THREAD_STOP.get())
     while SHOULD_THREAD_STOP.get() == 0:
         wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
         value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
