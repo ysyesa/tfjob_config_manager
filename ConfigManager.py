@@ -20,6 +20,8 @@ def get_mem_usage():
     global MEM_USAGE
     global SHOULD_METRICS_COLLECTED
 
+    average = 0
+    counter = 0
     while 1:
         if SHOULD_METRICS_COLLECTED == 1:
             wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
@@ -28,9 +30,16 @@ def get_mem_usage():
                 (float(value["node_memory_MemTotal_bytes"]) - float(value["node_memory_MemFree_bytes"])) / float(
                     value["node_memory_MemTotal_bytes"]) * 100)
 
+            total = average * counter + value
+            counter = counter + 1
+            average = total / counter
+
             if value > MEM_USAGE:
-                MEM_USAGE = value
-            time.sleep(5)
+                MEM_USAGE = average
+            time.sleep(2)
+        else:
+            average = 0
+            counter = 0
 
 
 def write_template(template):
