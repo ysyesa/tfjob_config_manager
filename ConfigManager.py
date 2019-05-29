@@ -110,6 +110,7 @@ def notify_upon_start():
     if thread_metrics is None:
         thread_metrics = Thread(target=get_mem_usage)
         thread_metrics.start()
+    print "Notification accepted"
     return jsonify("Notification accepted.")
 
 
