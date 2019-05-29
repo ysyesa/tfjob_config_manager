@@ -12,6 +12,7 @@ from flask import request
 
 app = Flask(__name__)
 
+SHOULD_THREAD_STOP = Queue()
 MEM_USAGE = Queue()
 thread_metrics = None
 
@@ -19,8 +20,7 @@ thread_metrics = None
 def get_mem_usage():
     MEM_USAGE.put(0)
     counter = 0
-    while 1:
-        print "get_mem_usage()"
+    while SHOULD_THREAD_STOP.get() == 0:
         wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
         value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
         value = math.ceil(
@@ -100,15 +100,20 @@ def root():
 
 @app.route("/notify", methods=["POST"])
 def notify_upon_start():
+    SHOULD_THREAD_STOP.empty()
+    SHOULD_THREAD_STOP.put(0)
+    SHOULD_THREAD_STOP.task_done()
     global thread_metrics
     thread_metrics = Thread(target=get_mem_usage)
     thread_metrics.start()
+    return jsonify("Notification accepted.")
 
 
 @app.route("/modify", methods=["POST"])
 def modify():
-    global thread_metrics
-    thread_metrics.exit()
+    SHOULD_THREAD_STOP.empty()
+    SHOULD_THREAD_STOP.put(1)
+    SHOULD_THREAD_STOP.task_done()
 
     tfjob_meta_name = request.form["tfjob_meta_name"]
     tfjob_current_epoch = request.form["tfjob_current_epoch"]
