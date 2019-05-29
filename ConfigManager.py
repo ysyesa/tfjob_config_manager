@@ -90,7 +90,7 @@ def get_worker_ps_replica(num_ps, num_worker, threshold, ratio, minimum):
             additional_ps = additional_ps + 1
             additional_worker = int(additional_ps / ratio)
 
-    return num_ps + additional_ps, num_worker + additional_worker, MEM_USAGE.get()
+    return num_ps + additional_ps, num_worker + additional_worker, MEM_USAGE
 
 
 @app.route("/", methods=["GET", "POST"])
