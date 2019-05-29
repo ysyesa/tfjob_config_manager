@@ -19,19 +19,17 @@ thread_metrics = None
 
 def get_mem_usage():
     MEM_USAGE.put(0)
-    counter = 0
     while SHOULD_THREAD_STOP.get() == 0:
         wanted_metrics = ["node_memory_MemTotal_bytes", "node_memory_MemFree_bytes"]
         value = get_metrics("http://10.148.0.15:9100/metrics", wanted_metrics)
         value = math.ceil(
             (float(value["node_memory_MemTotal_bytes"]) - float(value["node_memory_MemFree_bytes"])) / float(
                 value["node_memory_MemTotal_bytes"]) * 100)
-        total = MEM_USAGE.get() * counter + value
-        counter = counter + 1
-        average = total / counter
-        MEM_USAGE.empty()
-        MEM_USAGE.put(average)
-        MEM_USAGE.task_done()
+
+        if value > MEM_USAGE.get():
+            MEM_USAGE.empty()
+            MEM_USAGE.put(value)
+            MEM_USAGE.task_done()
         time.sleep(5)
 
 
