@@ -36,7 +36,7 @@ def get_mem_usage():
 
             if value > MEM_USAGE:
                 MEM_USAGE = average
-            time.sleep(2)
+            time.sleep(1)
         else:
             average = 0
             counter = 0
@@ -154,7 +154,7 @@ def modify():
     num_ps, num_worker, mem_usage = get_worker_ps_replica(
         num_ps=tfjob_ps_replica,
         num_worker=tfjob_worker_replica,
-        threshold=60,
+        threshold=50,
         ratio=1,
         minimum=1
     )
